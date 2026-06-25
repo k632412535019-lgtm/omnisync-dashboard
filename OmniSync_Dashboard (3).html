@@ -1,0 +1,775 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>OmniSync — System Integration Architecture | LOGage 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#1B2B6B; --navy2:#2D4A8A; --navy3:#3A5FA8; --navy4:#4E74C0; --navy-glow:rgba(27,43,107,.18);
+  --bg:#F0F3FB; --bg2:#E6ECF8; --white:#FFFFFF;
+  --panel:#FFFFFF; --panel2:#F7F9FE; --line:#D4DCF0;
+  --ink:#111827; --mut:#4B5675; --dim:#8892AA;
+  --teal:#0F7A8A; --teal-light:#E0F4F7; --teal-bd:#9ED0D8;
+  --green:#1A7A50; --green-light:#E6F5EE; --green-bd:#9DD4BE;
+  --amber:#7A5A00; --amber-light:#FFF4D6; --amber-bd:#E5C96A;
+  --red:#902525; --red-light:#FAEAEA; --red-bd:#E0A0A0;
+  --violet:#4A35A8; --violet-light:#EEEAF8; --violet-bd:#B0A4DF;
+  --mono:'IBM Plex Mono',monospace; --disp:'Space Grotesk',system-ui,sans-serif; --body:'Inter',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);line-height:1.5;-webkit-font-smoothing:antialiased}
+
+.wrap{max-width:1200px;margin:0 auto;padding:28px 20px 80px}
+
+/* ── TOP STRIP ── */
+.top-strip{background:var(--navy);padding:10px 24px;display:flex;align-items:center;
+  justify-content:space-between;gap:12px;flex-wrap:wrap}
+.strip-l{font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.55);letter-spacing:.12em;text-transform:uppercase}
+.strip-r{display:flex;align-items:center;gap:16px}
+.dot-live{width:7px;height:7px;border-radius:50%;background:#4FD18B;
+  box-shadow:0 0 0 0 rgba(79,209,139,.7);animation:pulse 2s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(79,209,139,.6)}70%{box-shadow:0 0 0 8px rgba(79,209,139,0)}100%{box-shadow:0 0 0 0 rgba(79,209,139,0)}}
+.strip-stat{font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.5)}
+.strip-stat b{color:#fff}
+
+/* ── HERO ── */
+.hero{background:linear-gradient(135deg,var(--navy) 0%,var(--navy2) 55%,var(--navy3) 100%);
+  border-radius:20px;padding:36px 40px 32px;margin:20px 0 24px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;right:-60px;top:-80px;width:420px;height:420px;
+  border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.06) 0%,transparent 70%)}
+.hero::after{content:'';position:absolute;left:40%;bottom:-40px;width:280px;height:280px;
+  border-radius:50%;background:radial-gradient(circle,rgba(78,116,192,.25) 0%,transparent 70%)}
+.hero-inner{position:relative;z-index:1}
+.hero-top{display:flex;align-items:flex-start;gap:18px;margin-bottom:20px;flex-wrap:wrap}
+.hero-logo{width:56px;height:56px;border-radius:15px;background:rgba(255,255,255,.15);
+  backdrop-filter:blur(4px);border:1px solid rgba(255,255,255,.2);
+  display:grid;place-items:center;flex:none}
+.hero-logo svg{width:30px;height:30px}
+.hero-name h1{font-family:var(--disp);font-size:32px;font-weight:700;color:#fff;letter-spacing:-.02em;line-height:1.1}
+.hero-name p{font-size:14px;color:rgba(255,255,255,.6);margin-top:5px}
+.hero-badge{margin-left:auto;padding:6px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.2);
+  background:rgba(255,255,255,.08);font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.65)}
+
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.kpi{background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:14px 18px}
+.kpi .v{font-family:var(--mono);font-size:26px;font-weight:500;color:#fff;line-height:1}
+.kpi .lbl{font-size:11.5px;color:rgba(255,255,255,.5);margin-top:5px}
+.kpi .sub{font-size:10.5px;color:rgba(255,255,255,.35);margin-top:2px}
+
+/* ── NAV TABS ── */
+.tabs{display:flex;gap:6px;margin-bottom:20px;background:var(--panel);border:1px solid var(--line);
+  border-radius:12px;padding:5px}
+.tab{flex:1;text-align:center;padding:9px 6px;border-radius:9px;cursor:pointer;
+  font-size:13px;font-weight:500;color:var(--mut);transition:.18s;border:none;background:none;font-family:var(--body)}
+.tab:hover{background:var(--bg2);color:var(--navy)}
+.tab.on{background:var(--navy);color:#fff}
+
+/* ── PANELS ── */
+.pnl{display:none}
+.pnl.on{display:block}
+
+/* ── SECTION HEADER ── */
+.sec-hdr{display:flex;align-items:center;gap:12px;margin-bottom:18px}
+.sec-hdr h2{font-family:var(--disp);font-size:22px;font-weight:700;color:var(--navy)}
+.sec-hdr .n{font-family:var(--mono);font-size:12px;color:var(--navy4);background:var(--bg2);
+  padding:3px 10px;border-radius:999px;border:1px solid var(--line)}
+
+/* ── ARCHITECTURE DIAGRAM ── */
+.arch-wrap{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:28px;margin-bottom:20px}
+.arch-title{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--navy3);margin-bottom:20px;display:flex;align-items:center;gap:8px}
+.arch-title::after{content:'';flex:1;height:1px;background:var(--line)}
+
+.arch-grid{display:grid;grid-template-columns:1fr 80px 200px 80px 1fr;gap:0;align-items:center;margin-bottom:28px}
+.sys-col{display:flex;flex-direction:column;gap:10px}
+.sys-box{background:var(--panel2);border:2px solid var(--line);border-radius:14px;padding:14px 16px;
+  transition:.18s;cursor:default}
+.sys-box:hover{border-color:var(--navy3);box-shadow:0 4px 20px var(--navy-glow)}
+.sys-box .icon{width:36px;height:36px;border-radius:9px;margin-bottom:9px;display:grid;place-items:center}
+.sys-box h3{font-family:var(--disp);font-size:15px;font-weight:700;color:var(--navy);margin-bottom:3px}
+.sys-box p{font-size:11.5px;color:var(--mut);line-height:1.4}
+.sys-box .tag{font-family:var(--mono);font-size:10px;color:var(--dim);margin-top:6px;
+  background:var(--bg2);padding:2px 8px;border-radius:999px;display:inline-block}
+
+/* hub centre */
+.hub-col{display:flex;justify-content:center;align-items:stretch}
+.hub-box{background:linear-gradient(180deg,var(--navy) 0%,var(--navy2) 100%);
+  border-radius:18px;padding:20px 18px;text-align:center;color:#fff;min-width:180px;
+  box-shadow:0 8px 32px var(--navy-glow),0 0 0 1px rgba(255,255,255,.08)}
+.hub-box .hb-icon{width:44px;height:44px;border-radius:11px;background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.15);display:grid;place-items:center;margin:0 auto 10px}
+.hub-box h3{font-family:var(--disp);font-size:17px;font-weight:700;margin-bottom:6px}
+.hub-box p{font-size:11.5px;color:rgba(255,255,255,.6);line-height:1.4}
+.hub-pills{display:flex;flex-direction:column;gap:5px;margin-top:10px}
+.hub-pill{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.12);border-radius:999px;
+  font-family:var(--mono);font-size:10px;color:rgba(255,255,255,.7);padding:3px 10px;text-align:center}
+
+/* arrows */
+.arrow-col{display:flex;flex-direction:column;justify-content:center;align-items:center;gap:6px;padding:4px 0}
+.arr{display:flex;flex-direction:column;align-items:center;gap:3px}
+.arr-line{width:2px;flex:1;min-height:18px}
+.arr-head{width:0;height:0}
+.arr-label{font-family:var(--mono);font-size:9.5px;text-align:center;max-width:70px;line-height:1.3}
+
+/* marketplace row */
+.mkt-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:12px}
+.mkt-box{background:var(--panel2);border:1.5px solid var(--line);border-radius:12px;padding:13px 15px;
+  text-align:center}
+.mkt-box .logo-placeholder{width:36px;height:36px;border-radius:8px;margin:0 auto 8px;
+  display:grid;place-items:center;font-family:var(--mono);font-size:13px;font-weight:600}
+.mkt-box h4{font-size:13px;font-weight:600;color:var(--navy)}
+.mkt-box p{font-size:11px;color:var(--dim);margin-top:2px}
+
+/* ownership table */
+.own-table{width:100%;border-collapse:collapse;margin-bottom:20px}
+.own-table th{background:var(--navy);color:#fff;font-size:12.5px;font-weight:600;padding:10px 14px;text-align:left}
+.own-table th:first-child{border-radius:8px 0 0 0}
+.own-table th:last-child{border-radius:0 8px 0 0}
+.own-table td{font-size:13px;padding:10px 14px;border-bottom:1px solid var(--line);color:var(--mut)}
+.own-table tr:nth-child(even) td{background:var(--bg2)}
+.own-table td:first-child{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--navy)}
+.own-table td b{color:var(--ink)}
+
+/* golden data card */
+.golden-card{background:linear-gradient(135deg,var(--navy),var(--navy2));border-radius:16px;
+  padding:22px 24px;color:#fff;margin-top:20px}
+.golden-card h3{font-family:var(--disp);font-size:18px;font-weight:700;margin-bottom:6px}
+.golden-card .sub{font-size:13px;color:rgba(255,255,255,.65);margin-bottom:16px}
+.golden-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.golden-item{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 14px}
+.golden-item .field{font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.5);margin-bottom:4px}
+.golden-item .rule{font-size:12.5px;color:#fff;line-height:1.4}
+.golden-item .stat{font-family:var(--mono);font-size:16px;font-weight:600;color:#FFCF6B;margin-top:6px}
+
+/* ── TIER SECTION ── */
+.tier-grid{display:grid;gap:12px}
+.tier-card{background:var(--panel);border:1.5px solid var(--line);border-radius:16px;padding:20px 22px;
+  display:grid;grid-template-columns:110px 1fr 180px;gap:18px;align-items:center}
+.tier-card:hover{border-color:var(--navy3);box-shadow:0 4px 20px var(--navy-glow)}
+.tier-badge{border-radius:999px;padding:6px 14px;font-family:var(--mono);font-size:13px;font-weight:600;text-align:center;width:fit-content}
+.tier-1 .tier-badge{background:var(--navy);color:#fff}
+.tier-2 .tier-badge{background:var(--bg2);color:var(--navy);border:1.5px solid var(--navy3)}
+.tier-3 .tier-badge{background:var(--bg2);color:var(--mut);border:1.5px solid var(--line)}
+.tier-skus{font-family:var(--mono);font-size:20px;font-weight:600;color:var(--navy);margin-top:4px}
+.tier-name{font-family:var(--disp);font-size:17px;font-weight:700;color:var(--navy);margin-bottom:4px}
+.tier-desc{font-size:13px;color:var(--mut);line-height:1.55}
+.tier-meta{text-align:right}
+.tier-lat{font-family:var(--mono);font-size:22px;font-weight:600;color:var(--navy)}
+.tier-lat-lbl{font-size:11.5px;color:var(--dim);margin-top:2px}
+.vel-bar-wrap{margin-top:16px}
+.vel-label{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--dim);margin-bottom:5px}
+.vel-track{height:14px;border-radius:999px;background:var(--bg2);overflow:hidden;border:1px solid var(--line)}
+.vel-fill{height:100%;border-radius:999px;transition:width 1.2s cubic-bezier(.4,0,.2,1)}
+.vel-fill.a{background:linear-gradient(90deg,var(--navy),var(--navy3));width:80%}
+.vel-fill.b{background:linear-gradient(90deg,var(--navy3),var(--navy4));width:15%}
+.vel-fill.c{background:var(--line);width:5%}
+
+/* cost proof */
+.cost-compare{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:20px}
+.cost-box{border-radius:14px;padding:16px 18px;text-align:center}
+.cost-box.highlight{background:var(--navy);color:#fff}
+.cost-box.muted{background:var(--panel);border:1.5px solid var(--line)}
+.cost-box .cv{font-family:var(--mono);font-size:28px;font-weight:600}
+.cost-box.highlight .cv{color:#fff}
+.cost-box.muted .cv{color:var(--dim)}
+.cost-box .cl{font-size:12px;margin-top:4px}
+.cost-box.highlight .cl{color:rgba(255,255,255,.65)}
+.cost-box.muted .cl{color:var(--dim)}
+.cost-box .cs{font-size:11px;margin-top:8px;padding:4px 10px;border-radius:999px;display:inline-block}
+.cost-box.highlight .cs{background:rgba(255,255,255,.1);color:rgba(255,255,255,.7)}
+.cost-box.muted .cs{background:var(--bg2);color:var(--dim)}
+
+/* evidence block */
+.evidence{background:var(--bg2);border-left:3px solid var(--navy);border-radius:0 10px 10px 0;
+  padding:14px 18px;margin:16px 0;font-size:13px;color:var(--mut)}
+.evidence b{color:var(--navy)}
+.evidence .src{font-family:var(--mono);font-size:10.5px;color:var(--dim);margin-top:5px}
+
+/* ── MASTER DATA FIREWALL ── */
+.firewall-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.fw-card{background:var(--panel);border:1.5px solid var(--line);border-radius:14px;padding:16px}
+.fw-card:hover{border-color:var(--navy3)}
+.fw-count{font-family:var(--mono);font-size:28px;font-weight:600;color:var(--navy);margin-bottom:4px}
+.fw-type{font-size:13.5px;font-weight:600;color:var(--ink);margin-bottom:6px}
+.fw-rule{font-size:12px;color:var(--mut);margin-bottom:8px;line-height:1.4}
+.fw-action{font-family:var(--mono);font-size:11px;padding:3px 10px;border-radius:999px;display:inline-block}
+
+/* ── ROI ── */
+.roi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.roi-card{background:var(--panel);border:1.5px solid var(--line);border-radius:14px;padding:18px}
+.roi-card.net{background:var(--navy);color:#fff}
+.roi-v{font-family:var(--mono);font-size:26px;font-weight:600;color:var(--navy)}
+.roi-card.net .roi-v{color:#fff}
+.roi-l{font-size:12.5px;color:var(--mut);margin-top:4px}
+.roi-card.net .roi-l{color:rgba(255,255,255,.65)}
+
+/* ── ROADMAP ── */
+.timeline{position:relative;padding-left:28px}
+.timeline::before{content:'';position:absolute;left:8px;top:8px;bottom:8px;width:2px;background:var(--line)}
+.tl-item{position:relative;margin-bottom:18px}
+.tl-dot{position:absolute;left:-28px;top:4px;width:16px;height:16px;border-radius:50%;background:var(--navy);
+  border:2px solid var(--bg)}
+.tl-phase{font-family:var(--mono);font-size:10.5px;color:var(--navy3);letter-spacing:.08em;text-transform:uppercase;margin-bottom:3px}
+.tl-title{font-size:15px;font-weight:600;color:var(--navy);margin-bottom:4px}
+.tl-body{font-size:13px;color:var(--mut);line-height:1.5}
+.tl-outcome{font-family:var(--mono);font-size:11px;color:var(--teal);margin-top:5px;
+  background:var(--teal-light);padding:2px 10px;border-radius:999px;display:inline-block}
+
+/* generic utils */
+.card{background:var(--panel);border:1.5px solid var(--line);border-radius:16px;padding:22px 24px;margin-bottom:16px}
+.inline-note{background:var(--bg2);border:1px solid var(--line);border-radius:10px;
+  padding:12px 16px;font-size:13px;color:var(--mut);margin:12px 0}
+.inline-note b{color:var(--navy)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+small{font-size:11px;color:var(--dim)}
+
+@media(max-width:860px){
+  .arch-grid{grid-template-columns:1fr;gap:16px}
+  .arrow-col{display:none}
+  .hub-col{margin:8px 0}
+  .kpi-row,.tier-card,.cost-compare,.roi-grid{grid-template-columns:1fr 1fr}
+  .firewall-grid{grid-template-columns:1fr 1fr}
+  .golden-grid{grid-template-columns:1fr 1fr}
+  .mkt-row{grid-template-columns:1fr}
+}
+@media(max-width:560px){
+  .kpi-row,.tier-card,.cost-compare,.roi-grid,.firewall-grid,.golden-grid{grid-template-columns:1fr}
+  .tier-card{grid-template-columns:1fr}
+  .tier-meta{text-align:left}
+  .hero-name h1{font-size:24px}
+}
+</style>
+</head>
+<body>
+
+<!-- Top strip -->
+<div class="top-strip">
+  <div class="strip-l">LOGage 2026 · Round 3 · Scenario 2 — System Integration Architecture</div>
+  <div class="strip-r">
+    <div class="dot-live"></div>
+    <div class="strip-stat"><b>OmniSync</b> Event-Driven Hub</div>
+    <div class="strip-stat">SKUs: <b>470</b></div>
+    <div class="strip-stat">Nodes: <b>4</b></div>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <!-- ── HERO ── -->
+  <div class="hero">
+    <div class="hero-inner">
+      <div class="hero-top">
+        <div class="hero-logo">
+          <svg viewBox="0 0 30 30" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="15" cy="15" r="12" stroke="white" stroke-width="1.8"/>
+            <circle cx="15" cy="15" r="4" fill="white"/>
+            <path d="M15 3v4M15 23v4M3 15h4M23 15h4" stroke="white" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="hero-name">
+          <h1>OmniSync</h1>
+          <p>WMS · ERP · Marketplace Integration Architecture — Omni-Channel Inventory Synchronisation</p>
+        </div>
+        <div class="hero-badge">LOGage 2026 · R3 · S2</div>
+      </div>
+      <div class="kpi-row">
+        <div class="kpi"><div class="v">−99.9%</div><div class="lbl">Oversell reduction</div><div class="sub">12 → 0.01 units/day at 10× peak</div></div>
+        <div class="kpi"><div class="v">29%</div><div class="lbl">Sync cost vs all-real-time</div><div class="sub">135 vs 470 relative units/day</div></div>
+        <div class="kpi"><div class="v">13.2h</div><div class="lbl">Safety stock cover</div><div class="sub">Fastest SKU at 10× Mega-Sale</div></div>
+        <div class="kpi"><div class="v">+360M</div><div class="lbl">Net benefit / year (VND)</div><div class="sub">ROI 60% · integration infra 600M</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TABS ── -->
+  <div class="tabs">
+    <button class="tab on" onclick="show('arch',this)">System Architecture</button>
+    <button class="tab" onclick="show('q1',this)">Q1 · Inventory Ownership</button>
+    <button class="tab" onclick="show('q2',this)">Q2 · Sync Tiers</button>
+    <button class="tab" onclick="show('q3',this)">Q3 · Conflict Resolution</button>
+    <button class="tab" onclick="show('q4',this)">Q4 · Master Data Firewall</button>
+    <button class="tab" onclick="show('roi',this)">Feasibility & ROI</button>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       PANEL 0: ARCHITECTURE
+  ══════════════════════════════════════════════ -->
+  <div id="arch" class="pnl on">
+
+    <div class="sec-hdr">
+      <h2>System Integration Architecture</h2>
+      <div class="n">OmniSync Event-Driven Hub</div>
+    </div>
+
+    <div class="arch-wrap">
+      <div class="arch-title">Full System Topology — Data Flow &amp; Ownership</div>
+
+      <!-- Internal systems left -->
+      <div style="display:grid;grid-template-columns:1fr 60px 220px 60px 1fr;gap:0;align-items:center;margin-bottom:20px">
+
+        <!-- LEFT: Internal Systems -->
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;margin-bottom:2px">Internal Systems (Company)</div>
+
+          <div class="sys-box">
+            <div class="icon" style="background:var(--violet-light)">
+              <svg viewBox="0 0 22 22" fill="none" width="20" height="20"><rect x="2" y="2" width="18" height="18" rx="4" stroke="#4A35A8" stroke-width="1.6"/><path d="M6 8h10M6 11h10M6 14h6" stroke="#4A35A8" stroke-width="1.4" stroke-linecap="round"/></svg>
+            </div>
+            <h3>SAP ERP / MM</h3>
+            <p>Aggregate inventory (plant/storage-location level). Financial system of record. Procurement, planning, golden master data.</p>
+            <div class="tag">Writes: Master data · Financials</div>
+          </div>
+
+          <div class="sys-box">
+            <div class="icon" style="background:var(--teal-light)">
+              <svg viewBox="0 0 22 22" fill="none" width="20" height="20"><rect x="2" y="3" width="18" height="16" rx="3" stroke="#0F7A8A" stroke-width="1.6"/><path d="M7 8l3 3-3 3M13 14h3" stroke="#0F7A8A" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </div>
+            <h3>WMS (EWM / Standalone)</h3>
+            <p>Bin-level inventory execution. Sole writer of physical on-hand stock. Directs receipts, put-away, picks, and shipments.</p>
+            <div class="tag">Writes: Physical on-hand stock</div>
+          </div>
+        </div>
+
+        <!-- ARROW LEFT to HUB -->
+        <div style="display:flex;flex-direction:column;gap:14px;align-items:center;padding:24px 0">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+            <div style="font-family:var(--mono);font-size:9px;color:var(--navy3);text-align:center;max-width:58px;line-height:1.3">Stock events (WMS)</div>
+            <svg width="40" height="18" viewBox="0 0 40 18"><path d="M2 9 L34 9" stroke="#2D4A8A" stroke-width="1.8"/><path d="M30 4 L38 9 L30 14" stroke="#2D4A8A" stroke-width="1.8" fill="none"/></svg>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+            <svg width="40" height="18" viewBox="0 0 40 18" style="transform:scaleX(-1)"><path d="M2 9 L34 9" stroke="#2D4A8A" stroke-width="1.8"/><path d="M30 4 L38 9 L30 14" stroke="#2D4A8A" stroke-width="1.8" fill="none"/></svg>
+            <div style="font-family:var(--mono);font-size:9px;color:var(--navy3);text-align:center;max-width:58px;line-height:1.3">Master data (ERP)</div>
+          </div>
+        </div>
+
+        <!-- CENTRE: OmniSync Hub -->
+        <div class="hub-col">
+          <div class="hub-box" style="flex:1">
+            <div class="hb-icon">
+              <svg viewBox="0 0 24 24" fill="none" width="22" height="22"><circle cx="12" cy="12" r="9" stroke="white" stroke-width="1.6"/><circle cx="12" cy="12" r="3.5" fill="white"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" stroke="white" stroke-width="1.4" stroke-linecap="round"/></svg>
+            </div>
+            <h3>OmniSync Hub</h3>
+            <p style="font-size:11px;color:rgba(255,255,255,.55)">Event-Driven iPaaS Integration Layer</p>
+            <div class="hub-pills">
+              <div class="hub-pill">Event Stream</div>
+              <div class="hub-pill">API Gateway</div>
+              <div class="hub-pill">ATS Engine</div>
+              <div class="hub-pill">MDM Firewall</div>
+              <div class="hub-pill">Reservation Ledger</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ARROW HUB to RIGHT -->
+        <div style="display:flex;flex-direction:column;gap:14px;align-items:center;padding:24px 0">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+            <div style="font-family:var(--mono);font-size:9px;color:var(--navy3);text-align:center;max-width:58px;line-height:1.3">ATS push (webhook)</div>
+            <svg width="40" height="18" viewBox="0 0 40 18"><path d="M2 9 L34 9" stroke="#2D4A8A" stroke-width="1.8"/><path d="M30 4 L38 9 L30 14" stroke="#2D4A8A" stroke-width="1.8" fill="none"/></svg>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:center;gap:4px">
+            <svg width="40" height="18" viewBox="0 0 40 18" style="transform:scaleX(-1)"><path d="M2 9 L34 9" stroke="#2D4A8A" stroke-width="1.8"/><path d="M30 4 L38 9 L30 14" stroke="#2D4A8A" stroke-width="1.8" fill="none"/></svg>
+            <div style="font-family:var(--mono);font-size:9px;color:var(--navy3);text-align:center;max-width:58px;line-height:1.3">Orders inbound</div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Marketplaces + Dark Stores -->
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div style="font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:.12em;text-transform:uppercase;margin-bottom:2px">External Channels (Read-Only Consumers)</div>
+
+          <div class="sys-box">
+            <div class="icon" style="background:var(--amber-light)">
+              <svg viewBox="0 0 22 22" fill="none" width="20" height="20"><circle cx="11" cy="11" r="8" stroke="#7A5A00" stroke-width="1.6"/><path d="M7 11h8M11 7v8" stroke="#7A5A00" stroke-width="1.4" stroke-linecap="round"/></svg>
+            </div>
+            <h3>Shopee · Lazada · Tiki</h3>
+            <p>E-commerce marketplaces. Consume ATS only — never write inventory. Display published ATS as available stock.</p>
+            <div class="tag">Reads: ATS from hub · Never writes stock</div>
+          </div>
+
+          <div class="sys-box">
+            <div class="icon" style="background:var(--green-light)">
+              <svg viewBox="0 0 22 22" fill="none" width="20" height="20"><rect x="3" y="8" width="16" height="11" rx="2" stroke="#1A7A50" stroke-width="1.6"/><path d="M7 8V6a4 4 0 018 0v2" stroke="#1A7A50" stroke-width="1.4"/></svg>
+            </div>
+            <h3>Dark Stores (DS1 · DS2)</h3>
+            <p>Forward fulfilment nodes for HCMC B2C. Operate as WMS sub-nodes. ATS computed per node (node-aware truth).</p>
+            <div class="tag">Node-aware ATS · 2–4h promise</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ATS Formula -->
+      <div style="background:var(--navy);border-radius:12px;padding:14px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <div style="font-family:var(--mono);font-size:12px;color:rgba(255,255,255,.5)">ATS FORMULA</div>
+        <div style="font-family:var(--mono);font-size:16px;color:#fff;font-weight:600">
+          ATS = On-Hand Stock <span style="color:rgba(255,255,255,.4)">−</span> Safety Stock <span style="color:rgba(255,255,255,.4)">−</span> Open Reservations
+        </div>
+        <div style="margin-left:auto;font-size:12px;color:rgba(255,255,255,.5)">Per SKU · Per Node · Channels never see safety stock buffer</div>
+      </div>
+    </div>
+
+    <!-- Why not point-to-point -->
+    <div class="card">
+      <div class="sec-hdr" style="margin-bottom:12px"><h2 style="font-size:18px">Why a Hub Architecture — Not Point-to-Point</h2></div>
+      <div class="grid2">
+        <div>
+          <p style="font-size:13.5px;color:var(--mut);line-height:1.6">In a direct mesh model, 3 systems require <b>3 bidirectional connections</b>. With 3 separate marketplaces, 2 dark-store nodes, and an OMS added, this grows to <b>15+ point-to-point links</b> — each with its own error handling, format mapping, and failure mode.</p>
+          <div class="inline-note" style="margin-top:12px"><b>Industry standard (Gartner, MuleSoft, Dell Boomi):</b> replace integration meshes with a centralised hub (iPaaS) once the system count exceeds 3. OmniSync applies this principle: one hub, governed event stream, single source of truth per domain.</div>
+        </div>
+        <div>
+          <table class="own-table" style="font-size:12px">
+            <thead><tr><th>Data Domain</th><th>Sole Writer</th><th>All Others</th></tr></thead>
+            <tbody>
+              <tr><td>Physical on-hand</td><td><b>WMS</b></td><td>Read-only event subscribers</td></tr>
+              <tr><td>Golden master data</td><td><b>SAP ERP</b></td><td>Downstream consumers via pub</td></tr>
+              <tr><td>Available-to-Sell (ATS)</td><td><b>OmniSync Hub</b> (derived)</td><td>Marketplaces read ATS only</td></tr>
+              <tr><td>Reservations / orders</td><td><b>Hub reservation ledger</b></td><td>WMS allocates on confirmed pick</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       PANEL Q1
+  ══════════════════════════════════════════════ -->
+  <div id="q1" class="pnl">
+    <div class="sec-hdr"><h2>Core Question 1 — Who Holds the True Inventory?</h2><div class="n">Single Source of Truth</div></div>
+
+    <div class="card">
+      <div style="font-family:var(--mono);font-size:11px;color:var(--navy3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:14px">SAP ERP vs WMS — Correct Role Definition</div>
+      <div class="grid2">
+        <div>
+          <div style="background:var(--violet-light);border:1.5px solid var(--violet-bd);border-radius:12px;padding:16px">
+            <div style="font-size:14px;font-weight:700;color:var(--violet);margin-bottom:8px">SAP ERP / Materials Management (MM)</div>
+            <ul style="font-size:13px;color:var(--mut);padding-left:16px;line-height:1.7">
+              <li>Tracks inventory at <b>plant / storage-location level</b> (aggregate)</li>
+              <li>Financial valuation of stock (COGS, balance sheet)</li>
+              <li>Procurement (POs, GRNs), demand planning (MRP)</li>
+              <li>Owns the <b>golden master record</b> for every SKU</li>
+              <li><i>Does not direct warehouse execution</i> — no bin-level visibility</li>
+            </ul>
+          </div>
+        </div>
+        <div>
+          <div style="background:var(--teal-light);border:1.5px solid var(--teal-bd);border-radius:12px;padding:16px">
+            <div style="font-size:14px;font-weight:700;color:var(--teal);margin-bottom:8px">WMS (SAP EWM / Standalone)</div>
+            <ul style="font-size:13px;color:var(--mut);padding-left:16px;line-height:1.7">
+              <li>Tracks inventory at <b>bin / slot / lot / serial level</b> (granular)</li>
+              <li>Directs all warehouse tasks: receive, put-away, pick, pack, ship</li>
+              <li>De-aggregates ERP stock into physical bin assignments</li>
+              <li><b>Sole writer</b> of on-hand stock — the only system with operational truth</li>
+              <li>Reports GR/GI events back to ERP at transaction confirmation points</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <div class="inline-note" style="margin-top:16px"><b>Key insight:</b> SAP ERP knows "Plant X has 500 units of SKU Y." WMS knows "Row 3, Bay 7, Level 2, Bin 14 holds 12 units — currently allocated to Pick Wave #441." Both views are needed; neither is a substitute for the other. WMS de-aggregates and executes; ERP plans and reports.</div>
+    </div>
+
+    <!-- Golden Master Data -->
+    <div class="golden-card">
+      <h3>What Is Golden Master Data?</h3>
+      <div class="sub">A single, authoritative, validated product record that all systems consume — maintained in SAP ERP, protected by OmniSync's MDM firewall before publication downstream.</div>
+      <div class="golden-grid">
+        <div class="golden-item">
+          <div class="field">SAP Material Code</div>
+          <div class="rule">Unique primary key — prevents duplicate records across all systems</div>
+          <div class="stat">686 duplicates found</div>
+        </div>
+        <div class="golden-item">
+          <div class="field">Volume (m³)</div>
+          <div class="rule">Required for warehouse space allocation and CBM calculation</div>
+          <div class="stat">1,333 rows missing</div>
+        </div>
+        <div class="golden-item">
+          <div class="field">Carton weight (kg)</div>
+          <div class="rule">Drives courier rate calculation and packing slip accuracy</div>
+          <div class="stat">237 rows missing</div>
+        </div>
+        <div class="golden-item">
+          <div class="field">CBM = L × W × H / 1,000,000</div>
+          <div class="rule">Validated: |CBM − L×W×H| ≤ 5% tolerance</div>
+          <div class="stat">717 mismatches</div>
+        </div>
+        <div class="golden-item">
+          <div class="field">Category (normalised)</div>
+          <div class="rule">Must be from controlled vocabulary — no case variants</div>
+          <div class="stat">3 casing variants</div>
+        </div>
+        <div class="golden-item">
+          <div class="field">How it flows</div>
+          <div class="rule">ERP → MDM Firewall → golden record → published to WMS + all marketplaces simultaneously</div>
+          <div class="stat">One spec, everywhere</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       PANEL Q2
+  ══════════════════════════════════════════════ -->
+  <div id="q2" class="pnl">
+    <div class="sec-hdr"><h2>Core Question 2 — How Fast to Sync?</h2><div class="n">Velocity-Tiered Synchronisation</div></div>
+
+    <div class="tier-grid">
+      <div class="tier-card tier-1">
+        <div>
+          <div class="tier-badge">TIER 1</div>
+          <div class="tier-skus">94 SKUs</div>
+          <small>Class A · Fast movers</small>
+        </div>
+        <div>
+          <div class="tier-name">Real-Time Webhook Push</div>
+          <div class="tier-desc">Stock-change events pushed via webhook immediately when WMS records a pick, receipt, or adjustment. A-class SKUs represent ~80% of velocity — oversell risk concentrates here. This is the only tier that justifies the real-time infrastructure cost.</div>
+          <div class="evidence"><b>Industry basis:</b> eZintegrations WMS-ERP sync (Manhattan Associates / SAP MM) achieves sub-60-second event processing; OneCart (Shopee/Lazada SEA) achieves "instant" stock sync within seconds. <span class="src">Sources: eZintegrations.ai (2026); getonecart.com (2025)</span></div>
+        </div>
+        <div class="tier-meta">
+          <div class="tier-lat">~2 s</div>
+          <div class="tier-lat-lbl">Max latency</div>
+          <div style="margin-top:10px;font-family:var(--mono);font-size:18px;font-weight:600;color:var(--navy)">~80%</div>
+          <div style="font-size:11px;color:var(--dim)">Velocity share</div>
+        </div>
+      </div>
+
+      <div class="tier-card tier-2">
+        <div>
+          <div class="tier-badge">TIER 2</div>
+          <div class="tier-skus">112 SKUs</div>
+          <small>Class B · Mid velocity</small>
+        </div>
+        <div>
+          <div class="tier-name">Micro-Batch (5-Minute Delta)</div>
+          <div class="tier-desc">Scheduled delta sync every 5 minutes. Aggregates multiple B-class events into a single batch push — reducing API call count vs per-event push. The 5-minute window is shorter than any picking wave cycle time, so the marketplace never sees a number more than one wave out of date.</div>
+          <div class="evidence"><b>Industry basis:</b> NetSuite WMS native connectors use 5-minute micro-batch for mid-velocity inventory sync. Zetpy (SEA multichannel platform for Shopee/Lazada) uses scheduled micro-batch for secondary channels. <span class="src">Sources: anchorgroup.tech (2026); zetpy.com (2026)</span></div>
+        </div>
+        <div class="tier-meta">
+          <div class="tier-lat">5 min</div>
+          <div class="tier-lat-lbl">Max latency</div>
+          <div style="margin-top:10px;font-family:var(--mono);font-size:18px;font-weight:600;color:var(--navy)">~15%</div>
+          <div style="font-size:11px;color:var(--dim)">Velocity share</div>
+        </div>
+      </div>
+
+      <div class="tier-card tier-3">
+        <div>
+          <div class="tier-badge">TIER 3</div>
+          <div class="tier-skus">264 SKUs</div>
+          <small>Class C · Slow tail</small>
+        </div>
+        <div>
+          <div class="tier-name">Hourly Batch Reconciliation</div>
+          <div class="tier-desc">Standard hourly batch job. C-class SKUs move ~5% of total velocity. A 60-minute stale figure for a fan that sells 2 units per week carries zero meaningful oversell risk — the safety stock cover on C-class is many days at any demand level.</div>
+          <div class="evidence"><b>Industry basis:</b> SAP MM standard batch reconciliation for non-time-critical storage-location postings uses hourly or daily cycles. Cadre Technologies (2026): "End-of-day financial postings don't need real-time updates." <span class="src">Sources: cadretech.com (2026); SAP standard configuration</span></div>
+        </div>
+        <div class="tier-meta">
+          <div class="tier-lat">60 min</div>
+          <div class="tier-lat-lbl">Max latency</div>
+          <div style="margin-top:10px;font-family:var(--mono);font-size:18px;font-weight:600;color:var(--dim)">~5%</div>
+          <div style="font-size:11px;color:var(--dim)">Velocity share</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="vel-bar-wrap card" style="margin-top:16px">
+      <div style="font-family:var(--mono);font-size:11px;color:var(--dim);margin-bottom:12px;text-transform:uppercase;letter-spacing:.1em">Velocity Share by Tier</div>
+      <div style="margin-bottom:8px">
+        <div class="vel-label"><span>Tier 1 (A) — Real-time</span><span>~80% of demand velocity</span></div>
+        <div class="vel-track"><div class="vel-fill a"></div></div>
+      </div>
+      <div style="margin-bottom:8px">
+        <div class="vel-label"><span>Tier 2 (B) — 5-min micro-batch</span><span>~15% of demand velocity</span></div>
+        <div class="vel-track"><div class="vel-fill b"></div></div>
+      </div>
+      <div>
+        <div class="vel-label"><span>Tier 3 (C) — 60-min batch</span><span>~5% of demand velocity</span></div>
+        <div class="vel-track"><div class="vel-fill c"></div></div>
+      </div>
+    </div>
+
+    <!-- Cost proof -->
+    <div class="cost-compare">
+      <div class="cost-box muted">
+        <div class="cv">470</div>
+        <div class="cl">All real-time sync cost (relative units/day)</div>
+        <div class="cs">Always-on consumers for all 470 SKUs</div>
+      </div>
+      <div class="cost-box highlight">
+        <div class="cv">135</div>
+        <div class="cl">OmniSync tiered cost (relative units/day)</div>
+        <div class="cs">29% of full real-time cost · 0.01 oversell/day</div>
+      </div>
+      <div class="cost-box muted">
+        <div class="cv">12</div>
+        <div class="cl">All-batch oversell (units/day at 10× peak)</div>
+        <div class="cs">Cheapest cost, unacceptable oversell risk</div>
+      </div>
+    </div>
+
+    <div class="evidence" style="margin-top:16px"><b>Why batch is cheaper than real-time (three dimensions):</b> (1) <b>API call volume</b> — polling-based real-time wastes up to 90% of calls on empty checks (Integrate.io, 2025). Batch fires only on actual data. (2) <b>Infrastructure cost</b> — real-time requires always-on message broker nodes (Kafka/RabbitMQ) sized to peak throughput; batch uses on-demand compute sized to data volume. Confluent/Forrester TEI study (2024) documented significant cost savings for tiered vs all-real-time architectures. (3) <b>Error-handling complexity</b> — real-time requires per-event retry logic, dead-letter queues, idempotency keys, and continuous monitoring. Batch jobs have simple all-or-retry semantics. The engineering cost of real-time for C-class SKUs (5% of velocity) is not justified by the marginal oversell protection. <span class="src">Sources: Cadre Technologies (2026); Integrate.io (2025); Confluent/Forrester (2024); Salesforce EDA Decision Guide (2025)</span></div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       PANEL Q3
+  ══════════════════════════════════════════════ -->
+  <div id="q3" class="pnl">
+    <div class="sec-hdr"><h2>Core Question 3 — Conflict on the Same Piece</h2><div class="n">Buffer-Protected ATS + Reservation Engine</div></div>
+
+    <div class="card">
+      <div style="font-size:15px;font-weight:600;color:var(--navy);margin-bottom:10px">Why True Last-Unit Races Are Structurally Rare</div>
+      <p style="font-size:13.5px;color:var(--mut);line-height:1.6;margin-bottom:14px">Marketplaces never see the safety stock. They see only <b>ATS = On-Hand − Safety Stock − Open Reservations</b>. The safety stock acts as a shock absorber. For a race to occur, two channels must simultaneously reduce ATS to zero — which requires draining not just the exposed ATS but fighting through the entire safety stock buffer first.</p>
+      <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px">
+        <div style="background:var(--green-light);border:1.5px solid var(--green-bd);border-radius:12px;padding:14px 16px">
+          <div style="font-family:var(--mono);font-size:11px;color:var(--green);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Fastest SKU (4200009163)</div>
+          <div style="font-family:var(--mono);font-size:28px;font-weight:600;color:var(--green)">13.2 h</div>
+          <div style="font-size:12.5px;color:var(--mut);margin-top:4px">Safety stock cover at 10× Mega-Sale peak. Any sync latency (2s–60min) is negligible vs this buffer.</div>
+        </div>
+        <div style="background:var(--teal-light);border:1.5px solid var(--teal-bd);border-radius:12px;padding:14px 16px">
+          <div style="font-family:var(--mono);font-size:11px;color:var(--teal);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">Median A-Class SKU</div>
+          <div style="font-family:var(--mono);font-size:28px;font-weight:600;color:var(--teal)">20.8 h</div>
+          <div style="font-size:12.5px;color:var(--mut);margin-top:4px">Safety stock cover at 10× peak. The reservation engine handles the rare edge case; the buffer handles normal volume.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="font-size:15px;font-weight:600;color:var(--navy);margin-bottom:14px">Reservation &amp; Recovery Sequence — 5 Steps</div>
+      <div style="display:flex;flex-direction:column;gap:0">
+
+        <div style="display:grid;grid-template-columns:32px 1fr;gap:12px;margin-bottom:12px;align-items:flex-start">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--navy);color:#fff;display:grid;place-items:center;font-family:var(--mono);font-size:13px;font-weight:600;flex:none">1</div>
+          <div><b style="color:var(--navy)">Soft Reservation:</b> <span style="font-size:13.5px;color:var(--mut)">Checkout places idempotent hold (TTL 10–15 min) against ATS. Retry-safe — same order-ID never creates duplicate hold.</span></div>
+        </div>
+        <div style="display:grid;grid-template-columns:32px 1fr;gap:12px;margin-bottom:12px;align-items:flex-start">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--navy2);color:#fff;display:grid;place-items:center;font-family:var(--mono);font-size:13px;font-weight:600;flex:none">2</div>
+          <div><b style="color:var(--navy)">Payment Confirms → Hard Allocation:</b> <span style="font-size:13.5px;color:var(--mut)">Payment gateway triggers hard WMS allocation. First-confirmed-paid wins. Competing hold expires or is rejected.</span></div>
+        </div>
+        <div style="display:grid;grid-template-columns:32px 1fr;gap:12px;margin-bottom:12px;align-items:flex-start">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--navy3);color:#fff;display:grid;place-items:center;font-family:var(--mono);font-size:13px;font-weight:600;flex:none">3</div>
+          <div><b style="color:var(--navy)">Auto-Cancel + Instant Refund:</b> <span style="font-size:13.5px;color:var(--mut)">Losing order auto-cancelled. Instant refund triggered. No manual review. WMS pick task proceeds for winner.</span></div>
+        </div>
+        <div style="display:grid;grid-template-columns:32px 1fr;gap:12px;margin-bottom:12px;align-items:flex-start">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--navy4);color:#fff;display:grid;place-items:center;font-family:var(--mono);font-size:13px;font-weight:600;flex:none">4</div>
+          <div><b style="color:var(--navy)">Customer Recovery:</b> <span style="font-size:13.5px;color:var(--mut)">Losing customer notified immediately with substitute SKU + restock ETA from ERP open PO data. Protects NPS and rating.</span></div>
+        </div>
+        <div style="display:grid;grid-template-columns:32px 1fr;gap:12px;align-items:flex-start">
+          <div style="width:28px;height:28px;border-radius:50%;background:var(--navy);color:#fff;display:grid;place-items:center;font-family:var(--mono);font-size:13px;font-weight:600;flex:none">5</div>
+          <div><b style="color:var(--navy)">B2B Priority Override:</b> <span style="font-size:13.5px;color:var(--mut)">Priority Score = (SLA Slack)⁻¹ × Penalty. B2B with 2h cutoff + ₫5M penalty beats B2C with 3-day window — regardless of payment sequence.</span></div>
+        </div>
+      </div>
+      <div class="inline-note" style="margin-top:16px">See companion flowchart <b>Flowchart_Reservation_Sequence.html</b> for the full decision-tree visualisation including decision nodes, branch paths, and system actor annotations.</div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       PANEL Q4
+  ══════════════════════════════════════════════ -->
+  <div id="q4" class="pnl">
+    <div class="sec-hdr"><h2>Core Question 4 — Master Data Firewall</h2><div class="n">MDM Defects Blocked Before Publish</div></div>
+
+    <div class="card" style="margin-bottom:16px">
+      <p style="font-size:13.5px;color:var(--mut);line-height:1.6">Bad master data is not a theoretical risk — our own SKU file (1,339 rows) proves it. Any record failing a validation rule is quarantined at ingestion, before it reaches the ERP golden record layer. It <i>cannot</i> propagate to WMS or marketplaces until corrected and re-validated.</p>
+    </div>
+
+    <div class="firewall-grid">
+      <div class="fw-card">
+        <div class="fw-count" style="color:#4A35A8">686</div>
+        <div class="fw-type">Duplicate SAP Codes</div>
+        <div class="fw-rule">Rule: SAP code is a unique primary key — only one record per code permitted</div>
+        <div class="fw-action" style="background:var(--red-light);color:var(--red)">Quarantine + Dedupe</div>
+      </div>
+      <div class="fw-card">
+        <div class="fw-count" style="color:var(--red)">1,333</div>
+        <div class="fw-type">Volume Zero / Missing</div>
+        <div class="fw-rule">Rule: Volume (m³) must be &gt; 0 — required for space planning and CBM computation</div>
+        <div class="fw-action" style="background:var(--red-light);color:var(--red)">Block + Recompute</div>
+      </div>
+      <div class="fw-card">
+        <div class="fw-count" style="color:var(--violet)">717</div>
+        <div class="fw-type">CBM Mismatch</div>
+        <div class="fw-rule">Rule: |CBM − L×W×H/1,000,000| ≤ 5% — shipping rates and parcel labels depend on this</div>
+        <div class="fw-action" style="background:var(--violet-light);color:var(--violet)">Flag for Review</div>
+      </div>
+      <div class="fw-card">
+        <div class="fw-count" style="color:var(--amber)">237</div>
+        <div class="fw-type">Carton Weight Missing</div>
+        <div class="fw-rule">Rule: Weight (kg) &gt; 0 — required for courier rate calculation and freight billing</div>
+        <div class="fw-action" style="background:var(--amber-light);color:var(--amber)">Block</div>
+      </div>
+      <div class="fw-card">
+        <div class="fw-count" style="color:var(--teal)">154</div>
+        <div class="fw-type">Pallet Config Zero/Missing</div>
+        <div class="fw-rule">Rule: Pallet qty &gt; 0 — needed for truck load planning and warehouse receiving</div>
+        <div class="fw-action" style="background:var(--teal-light);color:var(--teal)">Block</div>
+      </div>
+      <div class="fw-card">
+        <div class="fw-count" style="color:var(--green)">3</div>
+        <div class="fw-type">Category Casing Variants</div>
+        <div class="fw-rule">Rule: Category ∈ controlled vocabulary (case-insensitive match + auto-normalise)</div>
+        <div class="fw-action" style="background:var(--green-light);color:var(--green)">Auto-Normalise</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════
+       PANEL ROI
+  ══════════════════════════════════════════════ -->
+  <div id="roi" class="pnl">
+    <div class="sec-hdr"><h2>Feasibility &amp; ROI</h2><div class="n">Standard Building Blocks · Positive Economics</div></div>
+
+    <div class="roi-grid">
+      <div class="roi-card"><div class="roi-v">673M</div><div class="roi-l">Oversell cost avoided (VND/yr)</div></div>
+      <div class="roi-card"><div class="roi-v">288M</div><div class="roi-l">Manual reconciliation labour saved (VND/yr)</div></div>
+      <div class="roi-card"><div class="roi-v" style="color:var(--red)">−600M</div><div class="roi-l">Integration infrastructure cost (VND/yr)</div></div>
+      <div class="roi-card net"><div class="roi-v">+360M</div><div class="roi-l">Net annual benefit · ROI 60%</div></div>
+    </div>
+
+    <div class="card">
+      <div style="font-size:15px;font-weight:600;color:var(--navy);margin-bottom:12px">Implementation Roadmap</div>
+      <div class="timeline">
+        <div class="tl-item"><div class="tl-dot"></div><div class="tl-phase">Month 0–1</div><div class="tl-title">Hub + MDM Firewall</div><div class="tl-body">Stand up OmniSync hub and data-quality firewall. Clean 686 duplicates and missing specs. Establish golden record in ERP.</div><div class="tl-outcome">One golden record · No bad data downstream</div></div>
+        <div class="tl-item"><div class="tl-dot"></div><div class="tl-phase">Month 1–2</div><div class="tl-title">WMS as Sole Writer · Pilot ATS</div><div class="tl-body">Designate WMS as sole on-hand writer. Publish ATS to one marketplace (Shopee pilot). A-SKU real-time sync live.</div><div class="tl-outcome">No double-write · ATS live for A-SKUs</div></div>
+        <div class="tl-item"><div class="tl-dot"></div><div class="tl-phase">Month 2–3</div><div class="tl-title">Velocity Tiers + Reservation Engine</div><div class="tl-body">Deploy tiered sync across all three marketplaces. Activate reservation engine with TTL-based soft holds.</div><div class="tl-outcome">Oversell protection at peak · Conflict recovery live</div></div>
+        <div class="tl-item" style="margin-bottom:0"><div class="tl-dot"></div><div class="tl-phase">Month 3–4</div><div class="tl-title">Node-Aware ATS + Mega-Sale Ready</div><div class="tl-body">Connect dark-store nodes for node-aware ATS computation. Activate peak dashboard. Full Mega-Sale simulation test.</div><div class="tl-outcome">2–4h promises honoured · Mega-Sale-ready</div></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="font-size:15px;font-weight:600;color:var(--navy);margin-bottom:12px">Risk Register</div>
+      <table class="own-table">
+        <thead><tr><th>Risk</th><th>Mitigation</th></tr></thead>
+        <tbody>
+          <tr><td>Event stream outage</td><td>Last-known-good ATS cached; channels fail safe to conservative (lower) ATS — never an inflated one</td></tr>
+          <tr><td>Reservation TTL too long/short</td><td>TTL is per-tier and tunable; expired holds auto-release back to ATS pool</td></tr>
+          <tr><td>Master-data backlog in quarantine</td><td>Exception queue with SLA; family-level defaults unblock low-risk fields pending correction</td></tr>
+          <tr><td>Marketplace API rate limits at peak</td><td>Tiering naturally throttles C/B SKUs to batch, protecting API budget for A-SKU real-time calls</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /wrap -->
+
+<script>
+function show(id, btn) {
+  document.querySelectorAll('.pnl').forEach(p => p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+  document.getElementById(id).classList.add('on');
+  btn.classList.add('on');
+}
+// Animate velocity bars on load
+window.addEventListener('load', () => {
+  document.querySelectorAll('.vel-fill').forEach(el => {
+    const w = el.style.width;
+    el.style.width = '0';
+    setTimeout(() => { el.style.width = w; }, 200);
+  });
+});
+</script>
+</body>
+</html>
